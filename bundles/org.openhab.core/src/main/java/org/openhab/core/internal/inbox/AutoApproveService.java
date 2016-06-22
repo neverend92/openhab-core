@@ -16,7 +16,6 @@ import org.eclipse.smarthome.config.discovery.DiscoveryResult;
 import org.eclipse.smarthome.config.discovery.DiscoveryResultFlag;
 import org.eclipse.smarthome.config.discovery.inbox.Inbox;
 import org.eclipse.smarthome.config.discovery.inbox.InboxListener;
-import org.eclipse.smarthome.core.thing.setup.ThingSetupManager;
 import org.osgi.service.cm.ConfigurationException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -33,8 +32,6 @@ import org.slf4j.LoggerFactory;
 public class AutoApproveService implements InboxListener {
 
     final static private Logger logger = LoggerFactory.getLogger(AutoApproveService.class);
-
-    private ThingSetupManager thingSetupManager;
 
     private Inbox inbox;
 
@@ -68,7 +65,7 @@ public class AutoApproveService implements InboxListener {
 
         Configuration conf = new Configuration(props);
 
-        thingSetupManager.addThing(result.getThingUID(), conf, result.getBridgeUID(), result.getLabel());
+        // thingSetupManager.addThing(result.getThingUID(), conf, result.getBridgeUID(), result.getLabel());
     }
 
     @Override
@@ -88,12 +85,16 @@ public class AutoApproveService implements InboxListener {
         this.inbox = null;
     }
 
-    protected void setThingSetupManager(ThingSetupManager thingSetupManager) {
-        this.thingSetupManager = thingSetupManager;
-    }
+    /*
+     * protected void setThingSetupManager(ThingSetupManager thingSetupManager) {
+     * this.thingSetupManager = thingSetupManager;
+     * }
+     */
 
-    protected void unsetThingSetupManager(ThingSetupManager thingSetupManager) {
-        this.thingSetupManager = null;
-    }
+    /*
+     * protected void unsetThingSetupManager(ThingSetupManager thingSetupManager) {
+     * this.thingSetupManager = null;
+     * }
+     */
 
 }
