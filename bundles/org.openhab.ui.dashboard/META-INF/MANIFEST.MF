@@ -9,6 +9,7 @@ Service-Component: OSGI-INF/dashboardservice.xml
 Import-Package: javax.servlet,
  javax.servlet.http,
  org.apache.commons.io,
+ org.eclipse.smarthome.core.auth,
  org.osgi.framework,
  org.osgi.service.component,
  org.osgi.service.http,
