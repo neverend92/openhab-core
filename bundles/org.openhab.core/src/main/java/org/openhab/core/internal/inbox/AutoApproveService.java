@@ -8,10 +8,8 @@
  */
 package org.openhab.core.internal.inbox;
 
-import java.util.HashMap;
 import java.util.Map;
 
-import org.eclipse.smarthome.config.core.Configuration;
 import org.eclipse.smarthome.config.discovery.DiscoveryResult;
 import org.eclipse.smarthome.config.discovery.DiscoveryResultFlag;
 import org.eclipse.smarthome.config.discovery.inbox.Inbox;
@@ -61,11 +59,7 @@ public class AutoApproveService implements InboxListener {
     @Override
     public void thingAdded(Inbox source, DiscoveryResult result) {
         logger.debug("Approving inbox entry '{}'", result.toString());
-        Map<String, Object> props = new HashMap<>(result.getProperties());
-
-        Configuration conf = new Configuration(props);
-
-        // thingSetupManager.addThing(result.getThingUID(), conf, result.getBridgeUID(), result.getLabel());
+        inbox.approve(result.getThingUID(), result.getLabel());
     }
 
     @Override
@@ -84,17 +78,5 @@ public class AutoApproveService implements InboxListener {
         this.inbox.removeInboxListener(this);
         this.inbox = null;
     }
-
-    /*
-     * protected void setThingSetupManager(ThingSetupManager thingSetupManager) {
-     * this.thingSetupManager = thingSetupManager;
-     * }
-     */
-
-    /*
-     * protected void unsetThingSetupManager(ThingSetupManager thingSetupManager) {
-     * this.thingSetupManager = null;
-     * }
-     */
 
 }
