@@ -47,11 +47,13 @@ public class DashboardService {
 
     private BundleContext bundleContext;
 
+    private AuthenticatedHttpContext authHttpContext;
+
     protected void activate(ComponentContext componentContext) {
         try {
             bundleContext = componentContext.getBundleContext();
             Hashtable<String, String> props = new Hashtable<String, String>();
-            AuthenticatedHttpContext authHttpContext = new AuthenticatedHttpContext(bundleContext);
+            this.authHttpContext = new AuthenticatedHttpContext(bundleContext.getBundle());
             httpService.registerServlet(DASHBOARD_ALIAS + "/" + SERVLET_NAME, createServlet(), props, authHttpContext);
             httpService.registerResources(DASHBOARD_ALIAS, "web", null);
             logger.info("Started dashboard at " + DASHBOARD_ALIAS);
@@ -74,9 +76,6 @@ public class DashboardService {
     }
 
     protected void addDashboardTile(DashboardTile tile) {
-        if (tile.getName().equals("Classic UI")) {
-            return;
-        }
         tiles.add(tile);
     }
 
