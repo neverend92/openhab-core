@@ -16,6 +16,7 @@ import javax.servlet.http.HttpServlet;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 
+import org.eclipse.smarthome.core.auth.AuthUtils;
 import org.eclipse.smarthome.core.auth.Authentication;
 import org.eclipse.smarthome.core.auth.Permission;
 import org.eclipse.smarthome.core.auth.PermissionRepository;
@@ -45,18 +46,6 @@ public class DashboardServlet extends HttpServlet {
         this.tiles = tiles;
     }
 
-    private boolean hasRoleMatch(String[] roles1, String[] roles2) {
-        for (String role1 : roles1) {
-            for (String role2 : roles2) {
-                if (role1.equals(role2)) {
-                    return true;
-                }
-            }
-        }
-
-        return false;
-    }
-
     @Override
     protected void doGet(HttpServletRequest req, HttpServletResponse resp) throws ServletException, IOException {
         PermissionRepository repo = new PermissionRepositoryImpl();
@@ -69,16 +58,15 @@ public class DashboardServlet extends HttpServlet {
 
         StringBuilder entries = new StringBuilder();
         for (DashboardTile tile : tiles) {
-            String url = tile.getUrl();
-            url = url.substring(2);
-            Permission permission = repo.get(url);
+
+            Permission permission = repo.get(tile.getUrl());
             if (permission == null) {
                 // found no permission, dont display tile.
                 continue;
             }
 
             if (permission.getRoles().length > 0) {
-                if (!this.hasRoleMatch(permission.getRoles(), auth.getRoles())) {
+                if (!AuthUtils.hasRoleMatch(permission.getRoles(), auth.getRoles())) {
                     continue;
                 }
             }
