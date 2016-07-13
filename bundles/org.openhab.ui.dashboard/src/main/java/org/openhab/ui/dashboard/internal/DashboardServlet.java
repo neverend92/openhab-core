@@ -19,7 +19,7 @@ import javax.servlet.http.HttpServletResponse;
 import org.eclipse.smarthome.core.auth.AuthUtils;
 import org.eclipse.smarthome.core.auth.Authentication;
 import org.eclipse.smarthome.core.auth.Permission;
-import org.eclipse.smarthome.core.auth.PermissionRepository;
+import org.eclipse.smarthome.core.auth.Repository;
 import org.eclipse.smarthome.core.internal.auth.PermissionRepositoryImpl;
 import org.openhab.ui.dashboard.DashboardTile;
 
@@ -48,7 +48,7 @@ public class DashboardServlet extends HttpServlet {
 
     @Override
     protected void doGet(HttpServletRequest req, HttpServletResponse resp) throws ServletException, IOException {
-        PermissionRepository repo = new PermissionRepositoryImpl();
+        Repository<Permission> repo = new PermissionRepositoryImpl();
         Authentication auth = (Authentication) req.getSession().getAttribute("auth");
 
         if (auth == null) {
