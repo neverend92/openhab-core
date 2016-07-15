@@ -16,8 +16,11 @@ import javax.servlet.http.HttpServlet;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 
+import org.eclipse.smarthome.core.auth.AuthUtils;
 import org.eclipse.smarthome.core.auth.Authentication;
-import org.eclipse.smarthome.core.internal.auth.AuthenticationProviderImpl;
+import org.eclipse.smarthome.core.auth.Permission;
+import org.eclipse.smarthome.core.auth.Repository;
+import org.eclipse.smarthome.core.internal.auth.PermissionRepositoryImpl;
 import org.openhab.ui.dashboard.DashboardTile;
 
 /**
@@ -37,14 +40,6 @@ public class DashboardServlet extends HttpServlet {
 
     private Set<DashboardTile> tiles;
 
-    /**
-     * Constructor for DashboardServlet
-     * HTML-Template Code and Dashboard Tile passed.
-     *
-     * @param indexTemplate
-     * @param entryTemplate
-     * @param tiles
-     */
     public DashboardServlet(String indexTemplate, String entryTemplate, Set<DashboardTile> tiles) {
         this.indexTemplate = indexTemplate;
         this.entryTemplate = entryTemplate;
@@ -53,6 +48,7 @@ public class DashboardServlet extends HttpServlet {
 
     @Override
     protected void doGet(HttpServletRequest req, HttpServletResponse resp) throws ServletException, IOException {
+        Repository<Permission> repo = new PermissionRepositoryImpl();
         Authentication auth = (Authentication) req.getSession().getAttribute("auth");
 
         if (auth == null) {
@@ -63,8 +59,16 @@ public class DashboardServlet extends HttpServlet {
         StringBuilder entries = new StringBuilder();
         for (DashboardTile tile : tiles) {
 
-            if (!AuthenticationProviderImpl.getInstace().isAllowed(auth, tile.getUrl())) {
+            Permission permission = repo.get(tile.getUrl());
+            if (permission == null) {
+                // found no permission, dont display tile.
                 continue;
+            }
+
+            if (permission.getRoles().length > 0) {
+                if (!AuthUtils.hasRoleMatch(permission.getRoles(), auth.getRoles())) {
+                    continue;
+                }
             }
 
             String entry = entryTemplate.replace("<!--name-->", tile.getName());
