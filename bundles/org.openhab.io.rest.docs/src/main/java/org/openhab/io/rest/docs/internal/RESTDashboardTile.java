@@ -8,7 +8,9 @@
  */
 package org.openhab.io.rest.docs.internal;
 
+import org.eclipse.smarthome.core.auth.AuthenticatedHttpContext;
 import org.openhab.ui.dashboard.DashboardTile;
+import org.osgi.service.component.ComponentContext;
 import org.osgi.service.http.HttpService;
 import org.osgi.service.http.NamespaceException;
 import org.slf4j.Logger;
@@ -37,15 +39,18 @@ public class RESTDashboardTile implements DashboardTile {
         this.httpService = null;
     }
 
-    protected void activate() {
+    protected void activate(ComponentContext componentContext) {
         try {
-            httpService.registerResources(ALIAS, "swagger", httpService.createDefaultHttpContext());
+            AuthenticatedHttpContext authHttpContext = new AuthenticatedHttpContext(
+                    componentContext.getBundleContext().getBundle());
+            httpService.registerResources(ALIAS, "swagger", authHttpContext);
+            logger.debug("Started REST documentation service at: {}", ALIAS);
         } catch (NamespaceException e) {
             logger.error("Could not start up REST documentation service: {}", e.getMessage());
         }
     }
 
-    protected void deactivate() {
+    protected void deactivate(ComponentContext componentContext) {
         httpService.unregister(ALIAS);
     }
 
