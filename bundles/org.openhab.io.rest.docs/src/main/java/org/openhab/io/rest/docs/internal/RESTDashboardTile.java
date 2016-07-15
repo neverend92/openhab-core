@@ -56,7 +56,7 @@ public class RESTDashboardTile implements DashboardTile {
 
     @Override
     public String getName() {
-        return "REST API";
+        return "REST API Docs";
     }
 
     @Override
