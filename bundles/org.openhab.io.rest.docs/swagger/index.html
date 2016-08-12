@@ -83,7 +83,25 @@
       }
 
       $('#input_apiKey').change(addApiKeyAuthorization);
+      
+      function getQueryParams(qs) {
+          qs = qs.split('+').join(' ');
 
+          var params = {},
+              tokens,
+              re = /[?&]?([^=]+)=([^&]*)/g;
+
+          while (tokens = re.exec(qs)) {
+              params[decodeURIComponent(tokens[1])] = decodeURIComponent(tokens[2]);
+          }
+
+          return params;
+      }
+      
+      var query = getQueryParams(document.location.search);
+      if (query.api_key) {
+          $('#input_apiKey').val(query.api_key);
+      }
       // if you have an apiKey you would like to pre-populate on the page for demonstration purposes...
       /*
         var apiKey = "myApiKeyXXXX123456789";
