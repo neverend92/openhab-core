@@ -24,12 +24,14 @@
         <feature>esh-model-thing-runtime</feature>
         <feature>esh-storage-mapdb</feature>
         <feature>esh-ui-iconset-classic</feature>
+        <feature>esh-io-javasound</feature>
         <feature>openhab-runtime-certificate</feature>
         <feature dependency="true">shell</feature>
         <bundle start-level="90">mvn:org.openhab.core/org.openhab.core/${project.version}</bundle>
         <bundle prerequisite="true">mvn:org.apache.karaf.shell/org.apache.karaf.shell.core/${karaf.version}</bundle>
         <bundle prerequisite="true">mvn:org.apache.karaf.wrapper/org.apache.karaf.wrapper.core/${karaf.version}</bundle>
         <bundle>mvn:org.openhab.core/org.openhab.core.karaf/${project.version}</bundle>
+        <bundle>mvn:org.openhab.core/org.openhab.io.sound/${project.version}</bundle>
     </feature>
 
     <feature name="openhab-runtime-certificate" description="SSL Certificate Generator" version="${project.version}">
