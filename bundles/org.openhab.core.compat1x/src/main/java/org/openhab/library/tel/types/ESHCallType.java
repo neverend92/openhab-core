@@ -99,9 +99,7 @@ public class ESHCallType implements ComplexType, Command, State {
 
     @Override
     public String toFullString() {
-        // TODO Auto-generated method stub.
-        // dirty fix. dont know if corrct.
-        return this.toString();
+        return toString();
     }
 
 }
