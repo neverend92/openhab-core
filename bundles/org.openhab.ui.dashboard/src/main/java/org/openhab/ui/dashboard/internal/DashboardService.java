@@ -21,6 +21,7 @@ import org.apache.commons.io.IOUtils;
 import org.eclipse.smarthome.core.auth.AuthenticatedHttpContext;
 import org.openhab.ui.dashboard.DashboardTile;
 import org.osgi.framework.BundleContext;
+import org.osgi.service.cm.ConfigurationAdmin;
 import org.osgi.service.component.ComponentContext;
 import org.osgi.service.http.HttpService;
 import org.osgi.service.http.NamespaceException;
@@ -42,6 +43,7 @@ public class DashboardService {
     private static final Logger logger = LoggerFactory.getLogger(DashboardService.class);
 
     protected HttpService httpService;
+    protected ConfigurationAdmin configurationAdmin;
 
     protected Set<DashboardTile> tiles = new CopyOnWriteArraySet<>();
 
@@ -67,6 +69,14 @@ public class DashboardService {
         logger.info("Stopped dashboard");
     }
 
+    protected void setConfigurationAdmin(ConfigurationAdmin configurationAdmin) {
+        this.configurationAdmin = configurationAdmin;
+    }
+
+    protected void unsetConfigurationAdmin(ConfigurationAdmin configurationAdmin) {
+        this.configurationAdmin = null;
+    }
+
     protected void setHttpService(HttpService httpService) {
         this.httpService = httpService;
     }
@@ -86,6 +96,7 @@ public class DashboardService {
     protected HttpServlet createServlet() {
         String indexTemplate;
         String entryTemplate;
+        String setupTemplate;
 
         URL index = bundleContext.getBundle().getEntry("templates/index.html");
         if (index != null) {
@@ -109,6 +120,17 @@ public class DashboardService {
             throw new RuntimeException("Cannot find entry.html - failed to initialize dashboard servlet");
         }
 
-        return new DashboardServlet(indexTemplate, entryTemplate, tiles);
+        URL setup = bundleContext.getBundle().getEntry("templates/setup.html");
+        if (setup != null) {
+            try {
+                setupTemplate = IOUtils.toString(setup.openStream());
+            } catch (IOException e) {
+                throw new RuntimeException(e);
+            }
+        } else {
+            throw new RuntimeException("Cannot find setup.html - failed to initialize dashboard servlet");
+        }
+
+        return new DashboardServlet(configurationAdmin, indexTemplate, entryTemplate, setupTemplate, tiles);
     }
 }
