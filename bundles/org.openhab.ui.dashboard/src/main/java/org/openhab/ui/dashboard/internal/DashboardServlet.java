@@ -61,21 +61,25 @@ public class DashboardServlet extends HttpServlet {
 
     @Override
     protected void doGet(HttpServletRequest req, HttpServletResponse resp) throws ServletException, IOException {
-        if (isSetup()) {
-            serveDashboard(req, resp);
-        } else {
-            serveSetup(req, resp);
-        }
+        /*
+         * if (isSetup()) {
+         * serveDashboard(req, resp);
+         * } else {
+         * serveSetup(req, resp);
+         * }
+         */
+        serveDashboard(req, resp);
     }
 
     private void serveDashboard(HttpServletRequest req, HttpServletResponse resp) throws IOException {
         Authentication auth = (Authentication) req.getSession().getAttribute("auth");
 
-        if (auth == null) {
-            resp.sendError(HttpServletResponse.SC_UNAUTHORIZED);
-            return;
-        }
-
+        /*
+         * if (auth == null) {
+         * resp.sendError(HttpServletResponse.SC_UNAUTHORIZED);
+         * return;
+         * }
+         */
         StringBuilder entries = new StringBuilder();
         for (DashboardTile tile : tiles) {
             if (!AuthenticationProviderImpl.getInstace().isAllowed(auth, tile.getUrl())) {

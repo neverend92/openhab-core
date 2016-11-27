@@ -159,4 +159,18 @@
         <bundle start-level="80">mvn:org.openhab.core/org.openhab.ui.paperui/${project.version}</bundle>
     </feature>
 
+		<feature name="openhab-ui-usermgmt" description="UserManagement UI" version="${project.version}">
+        <feature>openhab-runtime-base</feature>
+				<feature>esh-ui-mgmt</feature>
+        <feature>esh-ui-usermgmt</feature>
+        <bundle start-level="80">mvn:org.openhab.core/org.openhab.ui.usermgmt/${project.version}</bundle>
+    </feature>
+
+		<feature name="openhab-ui-nodemgmt" description="NodeManagement UI" version="${project.version}">
+        <feature>openhab-runtime-base</feature>
+				<feature>esh-ui-mgmt</feature>
+        <feature>esh-ui-nodemgmt</feature>
+        <bundle start-level="80">mvn:org.openhab.core/org.openhab.ui.nodemgmt/${project.version}</bundle>
+    </feature>
+
 </features>
