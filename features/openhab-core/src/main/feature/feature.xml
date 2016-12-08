@@ -173,4 +173,9 @@
         <bundle start-level="80">mvn:org.openhab.core/org.openhab.ui.nodemgmt/${project.version}</bundle>
     </feature>
 
+		<feature name="openhab-ui-auth" description="Auth UI" version="${project.version}">
+        <feature>openhab-runtime-base</feature>
+        <bundle start-level="80">mvn:org.openhab.core/org.openhab.ui.auth/${project.version}</bundle>
+    </feature>
+
 </features>

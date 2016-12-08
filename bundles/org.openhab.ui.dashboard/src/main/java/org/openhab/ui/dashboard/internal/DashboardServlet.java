@@ -18,6 +18,8 @@ import javax.servlet.http.HttpServlet;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 
+import org.eclipse.smarthome.core.auth.AuthenticatedHttpContext;
+import org.eclipse.smarthome.core.auth.AuthenticatedSession;
 import org.eclipse.smarthome.core.auth.Authentication;
 import org.eclipse.smarthome.core.internal.auth.AuthenticationProviderImpl;
 import org.openhab.core.OpenHAB;
@@ -71,8 +73,10 @@ public class DashboardServlet extends HttpServlet {
         serveDashboard(req, resp);
     }
 
-    private void serveDashboard(HttpServletRequest req, HttpServletResponse resp) throws IOException {
-        Authentication auth = (Authentication) req.getSession().getAttribute("auth");
+    private void serveDashboard(HttpServletRequest req, HttpServletResponse res) throws IOException {
+
+        String authSessionId = AuthenticatedHttpContext.getAuthSessionId(req, res);
+        Authentication auth = AuthenticatedSession.getInstance().get(authSessionId);
 
         /*
          * if (auth == null) {
@@ -92,9 +96,9 @@ public class DashboardServlet extends HttpServlet {
             entry = entry.replace("<!--icon-->", tile.getImageUrl());
             entries.append(entry);
         }
-        resp.setContentType("text/html;charset=UTF-8");
-        resp.getWriter().append(indexTemplate.replace("<!--entries-->", entries.toString()));
-        resp.getWriter().close();
+        res.setContentType("text/html;charset=UTF-8");
+        res.getWriter().append(indexTemplate.replace("<!--entries-->", entries.toString()));
+        res.getWriter().close();
     }
 
     private void serveSetup(HttpServletRequest req, HttpServletResponse resp) throws IOException {
