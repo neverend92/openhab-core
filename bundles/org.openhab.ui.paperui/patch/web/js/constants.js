@@ -11,8 +11,13 @@ angular.module('PaperUI.constants', [])
   'configuration': true,
   'setup': true,
   'configuration': true,
-  'extensions': true,
+  'extensions' : {
+      'label':'Add-ons',
+      'visible' : true
+  },
   'rules': true,
   'preferences': true,
   'groups': false
+}).constant('moduleLabels', {
+    'extensions' : 'Add-ons'
 });

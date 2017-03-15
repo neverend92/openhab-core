@@ -96,6 +96,7 @@ public class DashboardService {
     protected HttpServlet createServlet() {
         String indexTemplate;
         String entryTemplate;
+        String warnTemplate;
         String setupTemplate;
 
         URL index = bundleContext.getBundle().getEntry("templates/index.html");
@@ -120,6 +121,17 @@ public class DashboardService {
             throw new RuntimeException("Cannot find entry.html - failed to initialize dashboard servlet");
         }
 
+        URL warn = bundleContext.getBundle().getEntry("templates/warn.html");
+        if (warn != null) {
+            try {
+                warnTemplate = IOUtils.toString(warn.openStream());
+            } catch (IOException e) {
+                throw new RuntimeException(e);
+            }
+        } else {
+            throw new RuntimeException("Cannot find warn.html - failed to initialize dashboard servlet");
+        }
+
         URL setup = bundleContext.getBundle().getEntry("templates/setup.html");
         if (setup != null) {
             try {
@@ -131,6 +143,7 @@ public class DashboardService {
             throw new RuntimeException("Cannot find setup.html - failed to initialize dashboard servlet");
         }
 
-        return new DashboardServlet(configurationAdmin, indexTemplate, entryTemplate, setupTemplate, tiles);
+        return new DashboardServlet(configurationAdmin, indexTemplate, entryTemplate, warnTemplate, setupTemplate,
+                tiles);
     }
 }

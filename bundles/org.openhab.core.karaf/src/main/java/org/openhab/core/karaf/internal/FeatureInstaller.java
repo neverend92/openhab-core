@@ -8,15 +8,20 @@
  */
 package org.openhab.core.karaf.internal;
 
+import java.io.FileInputStream;
 import java.io.IOException;
 import java.net.URI;
+import java.nio.file.Path;
+import java.nio.file.Paths;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Dictionary;
+import java.util.EnumSet;
 import java.util.HashSet;
 import java.util.Hashtable;
 import java.util.List;
 import java.util.Map;
+import java.util.Properties;
 import java.util.Set;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
@@ -25,6 +30,7 @@ import org.apache.commons.lang.ArrayUtils;
 import org.apache.commons.lang.StringUtils;
 import org.apache.karaf.features.Feature;
 import org.apache.karaf.features.FeaturesService;
+import org.eclipse.smarthome.config.core.ConfigConstants;
 import org.eclipse.smarthome.core.events.Event;
 import org.eclipse.smarthome.core.events.EventPublisher;
 import org.eclipse.smarthome.core.extension.ExtensionEventFactory;
@@ -35,8 +41,6 @@ import org.osgi.service.cm.ConfigurationEvent;
 import org.osgi.service.cm.ConfigurationListener;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-
-import com.google.common.collect.Sets;
 
 /**
  * This service reads addons.cfg and installs listed addons (= Karaf features) and the selected package.
@@ -53,16 +57,6 @@ public class FeatureInstaller implements ConfigurationListener {
     private static final String PAX_URL_PID = "org.ops4j.pax.url.mvn";
     private static final String PROPERTY_MVN_REPOS = "org.ops4j.pax.url.mvn.repositories";
 
-    private static final String OH_SNAPSHOT_REPO = "http://oss.jfrog.org/libs-snapshot@id=oh-snapshot-repo@snapshots@noreleases";
-    private static final String OH_RELEASES_REPO = "https://jcenter.bintray.com@id=oh-releases-repo";
-    private static final String ESH_SNAPSHOT_REPO = "https://repo.eclipse.org/content/repositories/snapshots@id=esh-snapshot-repo@snapshots@noreleases";
-    private static final String ESH_RELEASES_REPO = "https://repo.eclipse.org/content/repositories/releases@id=esh-release-repo";
-    private static final Set<String> ONLINE_REPOS = Sets.newHashSet(OH_RELEASES_REPO, OH_SNAPSHOT_REPO,
-            ESH_RELEASES_REPO, ESH_SNAPSHOT_REPO);
-
-    private static final URI LEGACY_FEATURES_URI = URI
-            .create("mvn:org.openhab.addons/openhab-addons-legacy/LATEST/xml/features");
-
     public static final String STANDARD_PACKAGE = "standard";
     public static final String PREFIX = "openhab-";
     public static final String PREFIX_PACKAGE = "package-";
@@ -71,6 +65,9 @@ public class FeatureInstaller implements ConfigurationListener {
             "transformation", "misc" };
 
     private static final Logger logger = LoggerFactory.getLogger(FeatureInstaller.class);
+
+    private String online_repo_url = null;
+    private URI legacy_addons_url = null;
 
     private FeaturesService featuresService;
     private ConfigurationAdmin configurationAdmin;
@@ -106,6 +103,8 @@ public class FeatureInstaller implements ConfigurationListener {
     }
 
     protected void activate(final Map<String, Object> config) {
+        setOnlineRepoUrl();
+        setLegacyRepoUrl();
         modified(config);
     }
 
@@ -144,7 +143,7 @@ public class FeatureInstaller implements ConfigurationListener {
 
     public boolean addAddon(String type, String id) {
         try {
-            Configuration cfg = configurationAdmin.getConfiguration(OpenHAB.ADDONS_SERVICE_PID);
+            Configuration cfg = configurationAdmin.getConfiguration(OpenHAB.ADDONS_SERVICE_PID, null);
             Dictionary<String, Object> props = cfg.getProperties();
             Object typeProp = props.get(type);
             String[] addonIds = typeProp != null ? typeProp.toString().split(",") : new String[0];
@@ -167,7 +166,7 @@ public class FeatureInstaller implements ConfigurationListener {
 
     public boolean removeAddon(String type, String id) {
         try {
-            Configuration cfg = configurationAdmin.getConfiguration(OpenHAB.ADDONS_SERVICE_PID);
+            Configuration cfg = configurationAdmin.getConfiguration(OpenHAB.ADDONS_SERVICE_PID, null);
             Dictionary<String, Object> props = cfg.getProperties();
             Object typeProp = props.get(type);
             String[] addonIds = typeProp != null ? typeProp.toString().split(",") : new String[0];
@@ -187,80 +186,120 @@ public class FeatureInstaller implements ConfigurationListener {
         }
     }
 
-    private void setLegacyExtensions(FeaturesService service, Map<String, Object> config) {
-        if (config.get(CFG_LEGACY) != null && "true".equals(config.get(CFG_LEGACY).toString())) {
-            try {
-                service.addRepository(LEGACY_FEATURES_URI);
-            } catch (Exception e) {
-                logger.debug("Failed adding feature repo for legacy features - we might be offline: {}",
-                        e.getMessage());
-            }
+    private void setOnlineRepoUrl() {
+        Properties prop = new Properties();
+
+        Path versionFilePath = Paths.get(ConfigConstants.getUserDataFolder(), "etc", "version.properties");
+        try (FileInputStream fis = new FileInputStream(versionFilePath.toFile())) {
+            prop.load(fis);
+        } catch (Exception e) {
+            logger.warn("Cannot determine online repo url - online repo support will be disabled. Error: {}",
+                    e.getMessage());
+        }
+
+        String repo = prop.getProperty("online-repo");
+        if (repo != null && !repo.trim().isEmpty()) {
+            this.online_repo_url = repo.trim() + "@id=openhab@snapshots";
         } else {
-            try {
-                service.removeRepository(LEGACY_FEATURES_URI);
-            } catch (Exception e) {
-                logger.error("Failed removing feature repo of legacy features: {}", e.getMessage());
+            logger.warn("Cannot determine online repo url - online repo support will be disabled.");
+        }
+    }
+
+    private void setLegacyRepoUrl() {
+        Properties prop = new Properties();
+
+        Path versionFilePath = Paths.get(ConfigConstants.getUserDataFolder(), "etc", "version.properties");
+        try (FileInputStream fis = new FileInputStream(versionFilePath.toFile())) {
+            prop.load(fis);
+        } catch (Exception e) {
+            logger.warn("Cannot determine distro version - legacy addon support will be disabled. Error: {}",
+                    e.getMessage());
+        }
+
+        String version = prop.getProperty("openhab-distro");
+        if (version != null && !version.trim().isEmpty()) {
+            this.legacy_addons_url = URI
+                    .create("mvn:org.openhab.distro/openhab-addons-legacy/" + version.trim() + "/xml/features");
+        } else {
+            logger.warn("Cannot determine distro version - legacy addon support will be disabled.");
+        }
+    }
+
+    private void setLegacyExtensions(FeaturesService service, Map<String, Object> config) {
+        if (legacy_addons_url != null) {
+            if (config.get(CFG_LEGACY) != null && "true".equals(config.get(CFG_LEGACY).toString())) {
+                try {
+                    service.addRepository(legacy_addons_url);
+                } catch (Exception e) {
+                    logger.debug("Failed adding feature repo for legacy features - we might be offline: {}",
+                            e.getMessage());
+                }
+            } else {
+                try {
+                    service.removeRepository(legacy_addons_url);
+                } catch (Exception e) {
+                    // This usually throws an error like
+                    // "Feature named 'openhab-binding-homematic1/1.9.0.SNAPSHOT' is not installed"
+                    // as Karaf seems to try to uninstall all features for whatever reason
+                    // the repo is removed nonetheless in such a case
+                    logger.debug("Failed removing feature repo of legacy features: {}", e.getMessage());
+                }
             }
         }
     }
 
     private boolean getOnlineStatus() {
-        try {
-            Configuration paxCfg = configurationAdmin.getConfiguration(PAX_URL_PID);
-            Dictionary<String, Object> properties = paxCfg.getProperties();
-            if (properties == null) {
-                return false;
-            }
-            Object repos = properties.get(PROPERTY_MVN_REPOS);
-            List<String> repoCfg;
-            if (repos instanceof String) {
-                repoCfg = Arrays.asList(((String) repos).split(","));
-                for (String r : ONLINE_REPOS) {
-                    if (!repoCfg.contains(r)) {
-                        return false;
-                    }
+        if (online_repo_url != null) {
+            try {
+                Configuration paxCfg = configurationAdmin.getConfiguration(PAX_URL_PID, null);
+                Dictionary<String, Object> properties = paxCfg.getProperties();
+                if (properties == null) {
+                    return false;
                 }
-                return true;
+                Object repos = properties.get(PROPERTY_MVN_REPOS);
+                List<String> repoCfg;
+                if (repos instanceof String) {
+                    repoCfg = Arrays.asList(((String) repos).split(","));
+                    return repoCfg.contains(online_repo_url);
+                }
+            } catch (IOException e) {
+                logger.error("Failed getting the add-on management online/offline mode: {}", e.getMessage());
             }
-        } catch (IOException e) {
-            logger.error("Failed setting the extension management online/offline mode: {}", e.toString());
         }
         return false;
 
     }
 
     private void setOnlineStatus(boolean status) {
-        try {
-            Configuration paxCfg = configurationAdmin.getConfiguration(PAX_URL_PID);
-            paxCfg.setBundleLocation("?");
-            Dictionary<String, Object> properties = paxCfg.getProperties();
-            if (properties == null) {
-                properties = new Hashtable<>();
-            }
-            List<String> repoCfg = new ArrayList<>();
-            Object repos = properties.get(PROPERTY_MVN_REPOS);
-            if (repos instanceof String) {
-                repoCfg = new ArrayList<>(Arrays.asList(((String) repos).split(",")));
-                repoCfg.remove("");
-            }
-            if (status) {
-                for (String r : ONLINE_REPOS) {
-                    if (!repoCfg.contains(r)) {
-                        repoCfg.add(r);
+        if (online_repo_url != null) {
+            try {
+                Configuration paxCfg = configurationAdmin.getConfiguration(PAX_URL_PID, null);
+                paxCfg.setBundleLocation("?");
+                Dictionary<String, Object> properties = paxCfg.getProperties();
+                if (properties == null) {
+                    properties = new Hashtable<>();
+                }
+                List<String> repoCfg = new ArrayList<>();
+                Object repos = properties.get(PROPERTY_MVN_REPOS);
+                if (repos instanceof String) {
+                    repoCfg = new ArrayList<>(Arrays.asList(((String) repos).split(",")));
+                    repoCfg.remove("");
+                }
+                if (status) {
+                    if (!repoCfg.contains(online_repo_url)) {
+                        repoCfg.add(online_repo_url);
+                    }
+                } else {
+                    if (repoCfg.contains(online_repo_url)) {
+                        repoCfg.remove(online_repo_url);
                     }
                 }
-            } else {
-                for (String r : ONLINE_REPOS) {
-                    if (repoCfg.contains(r)) {
-                        repoCfg.remove(r);
-                    }
-                }
+                properties.put(PROPERTY_MVN_REPOS, StringUtils.join(repoCfg.toArray(), ","));
+                paxCfgUpdated = false;
+                paxCfg.update(properties);
+            } catch (IOException e) {
+                logger.error("Failed setting the add-on management online/offline mode: {}", e.getMessage());
             }
-            properties.put(PROPERTY_MVN_REPOS, StringUtils.join(repoCfg.toArray(), ","));
-            paxCfgUpdated = false;
-            paxCfg.update(properties);
-        } catch (IOException e) {
-            logger.error("Failed setting the extension management online/offline mode: {}", e.toString());
         }
     }
 
@@ -291,17 +330,41 @@ public class FeatureInstaller implements ConfigurationListener {
         });
     }
 
-    private void installAddons(final FeaturesService service, final Map<String, Object> config) {
+    private synchronized void installAddons(final FeaturesService service, final Map<String, Object> config) {
+        Set<String> installAddons = new HashSet<>();
+        Set<String> installedAddons = new HashSet<>();
+        Set<String> uninstallAddons = new HashSet<>();
         for (String type : addonTypes) {
             Object install = config.get(type);
             if (install instanceof String) {
-                String[] addons = ((String) install).split(",");
-                installFeatures(service, type, addons);
-                Set<String> addonsToUninstall = getAllAddonsOfType(type);
-                for (String addon : addons) {
-                    addonsToUninstall.remove(addon.trim());
+                String[] entries = ((String) install).split(",");
+                for (String addon : entries) {
+                    if (!StringUtils.isEmpty(addon)) {
+                        String id = PREFIX + type + "-" + addon.trim();
+                        installedAddons.add(id);
+                        if (!isInstalled(service, id)) {
+                            installAddons.add(id);
+                        }
+                    }
                 }
-                uninstallFeatures(service, type, addonsToUninstall.toArray(new String[addonsToUninstall.size()]));
+                // we collect all possible addons first
+                for (String addon : getAllAddonsOfType(type)) {
+                    if (!StringUtils.isEmpty(addon)) {
+                        uninstallAddons.add(PREFIX + type + "-" + addon.trim());
+                    }
+                }
+            }
+        }
+        // now remove everything from the list that we want to keep installed
+        for (String addon : installedAddons) {
+            uninstallAddons.remove(addon);
+        }
+        if (!installAddons.isEmpty()) {
+            installFeatures(service, installAddons);
+        }
+        if (!uninstallAddons.isEmpty()) {
+            for (String addon : uninstallAddons) {
+                uninstallFeature(service, addon);
             }
         }
     }
@@ -321,37 +384,36 @@ public class FeatureInstaller implements ConfigurationListener {
         return addons;
     }
 
-    private void installFeatures(FeaturesService featuresService, String type, String[] addons) {
-        for (String addon : addons) {
-            if (StringUtils.isNotBlank(addon)) {
-                String name = PREFIX + type + "-" + addon.trim();
-                installFeature(featuresService, name);
+    private synchronized void installFeatures(FeaturesService featuresService, Set<String> addons) {
+        try {
+            featuresService.installFeatures(addons,
+                    EnumSet.of(FeaturesService.Option.Upgrade, FeaturesService.Option.NoFailOnFeatureNotFound));
+            logger.debug("Installed '{}'", StringUtils.join(addons, ", "));
+            for (String addon : addons) {
+                if (isInstalled(featuresService, addon)) {
+                    postInstalledEvent(addon);
+                }
             }
+        } catch (Exception e) {
+            logger.error("Failed installing '{}': {}", StringUtils.join(addons, ", "), e.getMessage());
         }
     }
 
-    private void uninstallFeatures(FeaturesService service, String type, String[] addons) {
-        for (String addon : addons) {
-            if (StringUtils.isNotBlank(addon)) {
-                String name = PREFIX + type + "-" + addon.trim();
-                uninstallFeature(featuresService, name);
-            }
-        }
-    }
-
-    private static void installFeature(FeaturesService featuresService, String name) {
+    private static synchronized void installFeature(FeaturesService featuresService, String name) {
         try {
             if (!isInstalled(featuresService, name)) {
                 featuresService.installFeature(name);
-                logger.info("Installed '{}'", name);
-                postInstalledEvent(name);
+                if (isInstalled(featuresService, name)) {
+                    logger.debug("Installed '{}'", name);
+                    postInstalledEvent(name);
+                }
             }
         } catch (Exception e) {
             logger.error("Failed installing '{}': {}", name, e.getMessage());
         }
     }
 
-    private static void uninstallFeature(FeaturesService featuresService, String name) {
+    private static synchronized void uninstallFeature(FeaturesService featuresService, String name) {
         try {
             if (isInstalled(featuresService, name)) {
                 featuresService.uninstallFeature(name);
@@ -363,7 +425,7 @@ public class FeatureInstaller implements ConfigurationListener {
         }
     }
 
-    private static void installPackage(FeaturesService featuresService, final Map<String, Object> config) {
+    private static synchronized void installPackage(FeaturesService featuresService, final Map<String, Object> config) {
         Object packageName = config.get(OpenHAB.CFG_PACKAGE);
         if (packageName instanceof String) {
             currentPackage = (String) packageName;

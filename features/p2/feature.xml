@@ -12,7 +12,7 @@
 <feature
       id="org.openhab.feature.p2"
       label="openHAB Core Components"
-      version="2.0.0.qualifier"
+      version="2.1.0.qualifier"
       provider-name="openHAB.org">
 
    <description>
@@ -29,12 +29,6 @@
          install-size="0"
          version="0.0.0"
          unpack="false"/>
-
-   <plugin
-         id="org.openhab.io.transport.serial"
-         download-size="0"
-         install-size="0"
-         version="0.0.0"/>
 
    <plugin
          id="org.openhab.core.compat1x"
